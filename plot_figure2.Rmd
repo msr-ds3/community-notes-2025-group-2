@@ -1,0 +1,17 @@
+```{r testing}
+
+predictions <- predict(model, newdata = complete_2015)
+rmse <- sqrt(mean((predictions - complete_2015$num_trips)^2))
+rmse
+
+head(predictions)
+
+complete_2015$predicted_trips <- predict(model, newdata = complete_2015)
+ggplot(complete_2015, aes(x = ymd)) +
+  geom_point(aes(y = num_trips), color = "blue", alpha = 0.6, size = 2) +
+  geom_line(aes(y = predicted_trips), color = "red", size = 1) +
+  labs(title = "Actual vs Predicted Trips Over Time",
+       x = "Date", y = "Number of Trips") 
+
+#8011.61
+```
