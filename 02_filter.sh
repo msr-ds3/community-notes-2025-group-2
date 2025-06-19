@@ -1,9 +1,12 @@
-#look at zipped notes
-unzip -p notes-00000.zip | head
+#manually deleted empty files after filtered data 
 
-#convert start and end dates to milliseconds
+#look at zipped notes for format 
+
+unzip -p notes-00000.zip |head
+
+#convert start and end dates to milliseconds 
 date -d "2021-01-23T00:00:00Z" +%s000
-#January 23: 1611360000000
+#Jan 23-  1611360000000
 
 date -d "2021-07-31T23:59:59Z" +%s000
 #July 31: 1627775999000
@@ -25,6 +28,7 @@ done
 wc -l filtered_data/filtered_notes.tsv
 
 #manually deleted empty ratings files after filtered (10=19)
+
 #merge remaining rating files, merging headers
 head -n 1 filtered_data/filtered_ratings_00.tsv > complete_filtered_ratings.tsv
 for i in $(seq -w 0 9); do
