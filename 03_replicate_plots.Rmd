@@ -1,4 +1,3 @@
-
 ```{r setup, include=FALSE}
 library(scales)
 library(tidyverse)
@@ -9,8 +8,9 @@ library(stringr)
 
 ```{r}
 notes <- read_tsv("filtered_data/filtered_notes.tsv")
-str(notes)
+ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
 View(head(notes, 200))
+View(head(ratings, 200))
 ```
 
 #Figure 2
@@ -116,6 +116,11 @@ ggplot(count_of_distinct, aes(x = word_count, y = percent, color = classificatio
 
 #Figure 7a.
 ```{r compute ccdf}
+ratings <- group_by(ratings, noteId) |> mutate(votecount = n())
+
+notes$votecount <- ratings$votecount[match(notes$noteId, ratings$noteId)]
+# we assumed NA = 0 bc it won't have any row from the ratings table
+notes$votecount[is.na(notes$votecount)] <- 0
 ratings <- group_by(ratings, noteId) |> mutate(helpful_ratio = sum(helpful) / votecount)
 
 notes$helpful_ratio <- ratings$helpful_ratio[match(notes$noteId, ratings$noteId)]
@@ -149,15 +154,8 @@ ggplot(helpful_ratio, aes(x = helpful_ratio, y = percent, color = classification
     )
 ```
 
-
 #Figure 7b.
 ```{r compute ccdf}
-ratings <- group_by(ratings, noteId) |> mutate(votecount = n())
-
-notes$votecount <- ratings$votecount[match(notes$noteId, ratings$noteId)]
-# we assumed NA = 0 bc it won't have any row from the ratings table
-notes$votecount[is.na(notes$votecount)] <- 0
-
 count_of_votes <- group_by(notes, classification, votecount) |>
     summarize(count = n()) |>
     group_by(classification) |>
@@ -182,203 +180,11 @@ ggplot(count_of_votes, aes(x = votecount, y = percent, color = classification)) 
         title = "Total Votes",
         color = "Classification"
     )
-=======
-```{r setup}
-library(tidyverse)
-library(knitr)
-library(scales)
-libarary(stringr)
-
-
-notes <- read_tsv("filtered_data/filtered_notes.tsv")
-ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
-
-
 ```
-
-#Figure 2
-```{r figure 2, fig.width = 0.8, fig.height = 0.6}
-notes$trustworthySources <- factor(notes$trustworthySources, levels = c(0, 1), labels = c("Trustworthy sources", "No trustworthy sources"))
-
-ggplot(notes, aes(x = classification, fill = trustworthySources)) +  
-  geom_bar() +
-scale_x_discrete(labels = c(
-    "MISINFORMED_OR_POTENTIALLY_MISLEADING" = "Misleading", 
-    "NOT_MISLEADING" = "Not Misleading"
-  )) +  coord_flip()                        
-
-```
-
-#Figure 3
-```{r figure 3, fig.width = 0.8, fig.height = 0.6}
-
-
-
-  misleading_counts <- notes %>%
-    summarise(
-        misleadingOther = sum(misleadingOther),
-        misleadingOutdatedInformation = sum(misleadingOutdatedInformation),
-        misleadingFactualError= sum(misleadingFactualError),
-        misleadingManipulatedMedia= sum(misleadingManipulatedMedia),
-        misleadingMissingImportantContext= sum(misleadingMissingImportantContext),
-        misleadingUnverifiedClaimAsFact= sum(misleadingUnverifiedClaimAsFact),
-        misleadingSatire= sum(misleadingSatire)
-        ) %>%
-    pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
-    arrange(desc(count))
- 
-
- 
-ggplot(misleading_counts, aes(x = reorder(tag, count), y = count)) +
-    geom_bar(stat = "identity", fill = "red") +
-    coord_flip() +
-    labs(y = "Number of Birdwatches notes"
-    ) +
-    scale_x_discrete(labels = c(
-    "misleadingOther" = "Other", 
-    "misleadingOutdatedInformation" = "Outdated Information",
-    "misleadingFactualError" = "Factual error",
-    "misleadingManipulatedMedia" = "Manipulated media",
-      "misleadingMissingImportantContext" = "Missing important context",
-        "misleadingUnverifiedClaimAsFact" = "Unverified claim as fact",
-        "misleadingSatire" = "Satire"
-    
-  ))     
-
-```
-
-#Figure 4
-```{r figure 4}
-
-
-  misleading_counts <- notes %>%
-    summarise(
-        notMisleadingPersonalOpinion = sum(notMisleadingPersonalOpinion),
-        notMisleadingOther = sum(notMisleadingOther),
-        notMisleadingClearlySatire= sum(notMisleadingClearlySatire),
-        notMisleadingFactuallyCorrect = sum(notMisleadingFactuallyCorrect),
-        notMisleadingOutdatedButNotWhenWritten= sum(notMisleadingOutdatedButNotWhenWritten),
-        ) %>%
-    pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
-    arrange(desc(count))
- 
- 
- 
-ggplot(misleading_counts, aes(x = reorder(tag, count), y = count)) +
-    geom_bar(stat = "identity", fill = "blue") +
-    coord_flip() +
-    labs(y = "Number of Birdwatches notes"
-    ) +
-    scale_x_discrete(labels = c(
-    "notMisleadingOther" = "Other", 
-    "notMisleadingOutdatedButNotWhenWritten" = "Outdated but not when written",
-    "notMisleadingPersonalOpinion" = "Personal opinion",
-    "notMisleadingFactuallyCorrect" = "Factually correct",
-        "notMisleadingClearlySatire" = "Clearly satire"
-    
-  ))     
-
-```
-
-#Figure 5c
-```{r figure 5c}
-
-#add word count col to ntoes
-notes <- mutate(notes, word_count = str_count(summary, "\\w+"))   
-
-notes <- arrange(notes, word_count)
-count_of_distinct <- group_by(notes, classification, word_count) |> summarize(count = n()) |> group_by(classification) |> arrange(classification, word_count) |> mutate(notes_with_count = rev(cumsum(rev(count))), total_notes = sum(count), percent = (notes_with_count/total_notes)*100)
-
-ggplot(count_of_distinct, aes(x = word_count, y = percent, color = classification)) +
-  geom_line(size = 1.2) +
-  scale_y_log10(labels = scales::comma) +
-  scale_color_manual(
-    values = c(
-      "MISINFORMED_OR_POTENTIALLY_MISLEADING" = "red",
-      "NOT_MISLEADING" = "blue"
-    ),
-    labels = c(
-      "MISINFORMED_OR_POTENTIALLY_MISLEADING" = "Misleading",
-      "NOT_MISLEADING" = "Not Misleading"
-    )
-  ) +
-  labs(
-    x = "Word count",
-    y = "CCDF (%)",
-    title = "CCDF of Word Count by Misleading Status",
-    color = "Classification"
-  )
-
-```
-
-#Figure 7a
-```{r figure 7a}
-ratings <- group_by(ratings, noteId) |> mutate(votecount = n())
-notes$votecount <- ratings$votecount[match(notes$noteId, ratings$noteId)]
-#we assumed NA = 0 bc it won't have any row from the ratings table
-notes$votecount[is.na(notes$votecount)] <- 0
-
-ratings <- group_by(ratings, noteId) |> mutate(helpful_ratio = sum(helpful)/votecount)
-
-notes$helpful_ratio <- ratings$helpful_ratio[match(notes$noteId, ratings$noteId)]
-#we assumed NA = 0 bc it won't have any row from the ratings table
-notes$helpful_ratio[is.na(notes$helpful_ratio)] <- 0
-
-
-
-count_of_helpful <- group_by(notes, classification, helpful_ratio) |> summarize(count = n()) |> group_by(classification) |> arrange(classification, helpful_ratio) |> mutate(helpful = rev(cumsum(rev(count))), total_notes = sum(count), percent = (helpful/total_notes)*100)
-ggplot(count_of_helpful, aes(x = helpful_ratio, y = percent, color = classification)) +
-  geom_line(size = 1.2) +
-  scale_color_manual(
-    values = c(
-      "MISINFORMED_OR_POTENTIALLY_MISLEADING" = "red",
-      "NOT_MISLEADING" = "blue"
-    ),
-    labels = c(
-      "MISINFORMED_OR_POTENTIALLY_MISLEADING" = "Misleading",
-      "NOT_MISLEADING" = "Not Misleading"
-    )
-  ) +
-  labs(
-    x = "Votes (helpful & not helpful)",
-    y = "CCDF (%)",
-    title = "Total Votes",
-    color = "Classification"
-  ) + scale_y_log10()
-
-```
-
-#Figure 7b
-```{r figure 7b}
-
-
-count_of_votes <- group_by(notes, classification, votecount) |> summarize(count = n()) |> group_by(classification) |> arrange(classification, votecount) |> mutate(votes = rev(cumsum(rev(count))), total_notes = sum(count), percent = (votes/total_notes)*100)
-ggplot(count_of_votes, aes(x = votecount, y = percent, color = classification)) +
-  geom_line(size = 1.2) +
-  scale_y_log10(labels = scales::comma) +
-  scale_color_manual(
-    values = c(
-      "MISINFORMED_OR_POTENTIALLY_MISLEADING" = "red",
-      "NOT_MISLEADING" = "blue"
-    ),
-    labels = c(
-      "MISINFORMED_OR_POTENTIALLY_MISLEADING" = "Misleading",
-      "NOT_MISLEADING" = "Not Misleading"
-    )
-  ) +
-  labs(
-    x = "Votes (helpful & not helpful)",
-    y = "CCDF (%)",
-    title = "Total Votes",
-    color = "Classification"
-  )
-
-```
-
 
 #Figure 8.
-
 ```{r}
+ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
 helpful_ratings_counts <- ratings %>%
     summarise(
         helpfulInformative = sum(helpfulInformative),
@@ -392,6 +198,8 @@ helpful_ratings_counts <- ratings %>%
     ) %>%
     pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
     arrange(desc(count))
+
+View(helpful_ratings_counts)
 
 ggplot(helpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
     geom_bar(stat = "identity", fill = "navyblue") +
@@ -407,6 +215,7 @@ ggplot(helpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
         "helpfulOther" = "Other"
     ))
 ```
+
 
 #Figure 9
 ```{r}
@@ -425,6 +234,7 @@ unhelpful_ratings_counts <- ratings %>%
     ) %>%
     pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
     arrange(desc(count))
+unhelpful_ratings_counts
 
 ggplot(unhelpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
     geom_bar(stat = "identity", fill = "dark red") +
