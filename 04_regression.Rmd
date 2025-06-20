@@ -12,206 +12,137 @@ library(knitr)
 library(ggplot2)
 library(stringr)
 library(broom)
-```
-```{r}
-notes <- read_tsv("filtered_data/filtered_notes.tsv")
-ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
+library(MASS)
 ```
 
-```{r}
-notes_with_ratings <- inner_join(notes, ratings, by = "noteId")
+
+```{r regression}
+#join data
+notes_with_ratings <- inner_join(notes, ratings, by = c("noteId", "votecount"))
 notes_ratings_source <- inner_join(notes_with_ratings, source_tweets, by = c("noteId", "tweetId"))
-View(head(notes_ratings_source, 200))
 
-# mutate so helpfulnessLevel doesn't intefere
+#reformat helpful
 notes_ratings_source <- mutate(notes_ratings_source,
-    helpful = if_else(!is.na(helpfulnessLevel) &
-        helpfulnessLevel %in% c("HELPFUL", "SOMEWHAT_HELPFUL"), 1, helpful),
-    notHelpful = if_else(!is.na(helpfulnessLevel) & helpfulnessLevel == "NOT_HELPFUL",
-        1, notHelpful
-    )
+  helpful = if_else(!is.na(helpfulnessLevel) &
+    helpfulnessLevel %in% c("HELPFUL", "SOMEWHAT_HELPFUL"), 1, helpful),
+  notHelpful = if_else(!is.na(helpfulnessLevel) & helpfulnessLevel == "NOT_HELPFUL", 1, notHelpful)
 )
 
-# mutate so we add accountAge
-current_date <- Sys.Date()
-current_year <- format(current_date, "%Y")
-
+#add account age
+current_year <- as.numeric(format(Sys.Date(), "%Y"))
 notes_ratings_source <- notes_ratings_source |>
-    mutate(account_age = as.numeric(current_year) - as.numeric(year(notes_ratings_source$source_account_created_at)))
+  mutate(account_age = current_year - as.numeric(year(source_account_created_at)))
 
+#filter to remove NA
 notes_ratings_source <- notes_ratings_source %>%
-    filter(
-        !is.na(helpful),
-        !is.na(classification),
-        !is.na(trustworthySources),
-        !is.na(word_count),
-        !is.na(account_age),
-        !is.na(source_followers_count),
-        !is.na(source_friends_count),
-        !is.na(source_verified)
-    )
+  filter(
+    !is.na(helpful),
+    !is.na(classification),
+    !is.na(trustworthySources),
+    !is.na(word_count),
+    !is.na(account_age),
+    !is.na(source_followers_count),
+    !is.na(source_friends_count),
+    !is.na(source_verified)
+  )
 
-helpful_model <- glm(
-    helpful ~ classification + trustworthySources + word_count + account_age +
-        source_followers_count + source_friends_count + source_verified,
-    family = "binomial",
-    data = notes_ratings_source
-)
+#get predictors that need to be scaled and outcome
+predictors <- notes_ratings_source %>%
+  select(word_count, account_age, source_followers_count, source_friends_count)
+vote_predictors <- predictors
 
-notes_ratings_source <- notes_ratings_source %>%
-    mutate(predicted_prob = predict(helpful_model, type = "response"))
+helpful_outcome <- notes_ratings_source$helpful
+votecount_outcome <- notes_ratings_source$votecount
 
-predictors <- notes_ratings_source %>% select(word_count, account_age, source_followers_count, source_friends_count)
-outcome <- notes_ratings_source$helpful
-
-
+# get z-scores for predictors (standardize)
 predictors_scaled <- as_tibble(scale(predictors))
+vote_predictors_scaled <- as_tibble(scale(vote_predictors))
 
-notes_scaled <- bind_cols(predictors_scaled,
-    classification = notes_ratings_source$classification,
-    trustworthySources = notes_ratings_source$trustworthySources,
-    source_verified = notes_ratings_source$source_verified,
-    helpful = outcome
+# combined the scaled predictors with the already categorical predictors
+helpful_scaled <- bind_cols(
+  predictors_scaled,
+  classification = notes_ratings_source$classification,
+  trustworthySources = notes_ratings_source$trustworthySources,
+  source_verified = notes_ratings_source$source_verified,
+  helpful = helpful_outcome
 )
 
-notes_scaled$classification <- relevel(factor(notes_scaled$classification), ref = "NOT_MISLEADING")
-notes_scaled$trustworthySources <- as.factor(notes_scaled$trustworthySources)
-
-helpful_model <- glm(helpful ~ classification + trustworthySources + word_count + account_age + source_followers_count + source_friends_count + source_verified,
-    data = notes_scaled, family = "binomial"
+votes_scaled <- bind_cols(
+  vote_predictors_scaled,
+  classification = notes_ratings_source$classification,
+  trustworthySources = notes_ratings_source$trustworthySources,
+  source_verified = notes_ratings_source$source_verified,
+  votecount = votecount_outcome
 )
 
+# set reference levels for categorical predictors
+helpful_scaled$classification <- relevel(factor(helpful_scaled$classification), ref = "NOT_MISLEADING")
+helpful_scaled$trustworthySources <- as.factor(helpful_scaled$trustworthySources)
 
-coef <- tidy(helpful_model)
-coef <- coef %>% filter(term != "(Intercept)")
+votes_scaled$classification <- relevel(factor(votes_scaled$classification), ref = "NOT_MISLEADING")
+votes_scaled$trustworthySources <- as.factor(votes_scaled$trustworthySources)
 
-coef$term <- factor(coef$term, levels = c(
-    "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING",
-    "trustworthySourcesNo trustworthy",
-    "word_count",
-    "account_age",
-    "source_followers_count",
-    "source_friends_count",
-    "source_verifiedTRUE"
-))
-
-ggplot(coef, aes(x = term, y = estimate)) +
-    geom_point(size = 8, color = "sea green") +
-    geom_errorbar(aes(ymin = estimate - (std.error * 2.56), ymax = estimate + (std.error * 2.56)), width = 0.2, color = "sea green", size = 1.5) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 13)) +
-    labs(x = NULL, y = NULL) +
-    geom_vline(xintercept = c(2.5, 3.5), linetype = "dashed", color = "black") +
-    annotate("text", x = 1, y = 0.95, label = "User categorization", size = 4, fontface = "bold") +
-    annotate("text", x = 3, y = 0.95, label = "Text explanation", size = 4, fontface = "bold") +
-    annotate("text", x = 4, y = 0.95, label = "Source tweet", size = 4, fontface = "bold") +
-    scale_x_discrete(labels = c(
-        "account_age" = "Account age",
-        "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING" = " Misleading",
-        "source_followers_count" = "Followers",
-        "source_friends_count" = "Followees",
-        "source_verifiedTRUE" = "Verified",
-        "trustworthySourcesNo trustworthy" = "Trustworthy Sources",
-        "word_count" = "Word count"
-    ))
-```
-
-```{r}
-notes_with_ratings <- inner_join(notes, ratings, by = "noteId")
-notes_ratings_source <- inner_join(notes_with_ratings, source_tweets, by = c("noteId", "tweetId"))
-
-# mutate so helpfulnessLevel doesn't intefere
-notes_ratings_source <- mutate(notes_ratings_source,
-    helpful = if_else(!is.na(helpfulnessLevel) &
-        helpfulnessLevel %in% c("HELPFUL", "SOMEWHAT_HELPFUL"), 1, helpful),
-    notHelpful = if_else(!is.na(helpfulnessLevel) & helpfulnessLevel == "NOT_HELPFUL",
-        1, notHelpful
-    )
-)
-
-# mutate so we add accountAge
-current_date <- Sys.Date()
-current_year <- format(current_date, "%Y")
-
-notes_ratings_source <- notes_ratings_source |> mutate(
-    account_age = as.numeric(current_year) - as.numeric(year(notes_ratings_source$source_account_created_at))
-)
-
-notes_ratings_source <- notes_ratings_source %>%
-    filter(
-        !is.na(helpful),
-        !is.na(classification),
-        !is.na(trustworthySources),
-        !is.na(word_count),
-        !is.na(account_age),
-        !is.na(source_followers_count),
-        !is.na(source_friends_count),
-        !is.na(source_verified)
-    )
-
+# fit models on standardized 
 helpful_model <- glm(
-    helpful ~ classification + trustworthySources + word_count + account_age +
-        source_followers_count + source_friends_count + source_verified,
-    family = "binomial",
-    data = notes_ratings_source
+  helpful ~ classification + trustworthySources + word_count + account_age +
+    source_followers_count + source_friends_count + source_verified,
+  data = notes_scaled, family = "binomial"
 )
 
-notes_ratings_source <- notes_ratings_source %>%
-    mutate(predicted_prob = predict(helpful_model, type = "response"))
-
-predictors <- notes_ratings_source %>% select(word_count, account_age, source_followers_count, source_friends_count)
-outcome <- notes_ratings_source$helpful
-
-
-predictors_scaled <- as_tibble(scale(predictors))
-
-notes_scaled <- bind_cols(
-    predictors_scaled,
-    classification = notes_ratings_source$classification,
-    trustworthySources = notes_ratings_source$trustworthySources,
-    source_verified = notes_ratings_source$source_verified,
-    helpful = outcome
+votes_model <- glm.nb(
+  votecount ~ classification + trustworthySources + word_count + account_age +
+    source_followers_count + source_friends_count + source_verified,
+  data = votes_scaled
 )
 
-notes_scaled$classification <- relevel(factor(notes_scaled$classification), ref = "NOT_MISLEADING")
-notes_scaled$trustworthySources <- as.factor(notes_scaled$trustworthySources)
+# get model coefficients
+votes_coef <- tidy(votes_model) |> filter(term != "(Intercept)")
+coef <- tidy(helpful_model) %>% filter(term != "(Intercept)")
 
-helpful_model <- glm(helpful ~ classification + trustworthySources + word_count + account_age + source_followers_count + source_friends_count + source_verified,
-    data = notes_scaled, family = "binomial"
+# set order to match figure
+term_levels <- c(
+  "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING",
+  "trustworthySourcesNo trustworthy",
+  "word_count",
+  "account_age",
+  "source_followers_count",
+  "source_friends_count",
+  "source_verifiedTRUE"
 )
+votes_coef$term <- factor(votes_coef$term, levels = term_levels)
+coef$term <- factor(coef$term, levels = term_levels)
 
-coef <- tidy(helpful_model)
-coef <- coef %>% filter(term != "(Intercept)")
+# label models to differentiate
+coef$Model <- "Helpfulness"
+votes_coef$Model <- "Votecount"
 
-coef$term <- factor(coef$term, levels = c(
-    "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING",
-    "trustworthySourcesNo trustworthy",
-    "word_count",
-    "account_age",
-    "source_followers_count",
-    "source_friends_count",
-    "source_verifiedTRUE"
-))
+# combine models and plot
+combined_coef <- bind_rows(coef, votes_coef)
 
-ggplot(coef, aes(x = term, y = estimate)) +
-    geom_point(size = 8, color = "sea green") +
-    geom_errorbar(aes(ymin = estimate - (std.error * 2.56), ymax = estimate + (std.error * 2.56)), width = 0.2, color = "sea green") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 13)) +
-    labs(x = NULL, y = NULL) +
-    geom_vline(xintercept = c(2.5, 3.5), linetype = "dashed", color = "black") +
-    annotate("text", x = 1, y = 0.95, label = "User categorization", size = 4, fontface = "bold") +
-    annotate("text", x = 3, y = 0.95, label = "Text explanation", size = 4, fontface = "bold") +
-    annotate("text", x = 4, y = 0.95, label = "Source tweet", size = 4, fontface = "bold") +
-    scale_x_discrete(labels = c(
-        "account_age" = "Account age",
-        "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING" = " Misleading",
-        "source_followers_count" = "Followers",
-        "source_friends_count" = "Followees",
-        "source_verifiedTRUE" = "Verified",
-        "trustworthySourcesNo trustworthy" = "Trustworthy Sources",
-        "word_count" = "Word count"
-    ))
+ggplot(combined_coef, aes(x = term, y = estimate, color = Model)) +
+  geom_point(size = 6, position = position_dodge(width = 0.5)) +
+  geom_errorbar(
+    aes(ymin = estimate - std.error * 2.56, ymax = estimate + std.error * 2.56),
+    width = 0.2, size = 1.2, position = position_dodge(width = 0.5)
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12)) +
+  labs(x = NULL, y = NULL, color = "Model") +
+  geom_vline(xintercept = c(2.5, 3.5), linetype = "dashed", color = "black") +
+  annotate("text", x = 1, y = max(combined_coef$estimate, na.rm = TRUE), label = "User categorization", size = 4, fontface = "bold") +
+  annotate("text", x = 3, y = max(combined_coef$estimate, na.rm = TRUE), label = "Text explanation", size = 4, fontface = "bold") +
+  annotate("text", x = 4, y = max(combined_coef$estimate, na.rm = TRUE), label = "Source tweet", size = 4, fontface = "bold") +
+  scale_x_discrete(labels = c(
+    "account_age" = "Account age",
+    "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING" = "Misleading",
+    "source_followers_count" = "Followers",
+    "source_friends_count" = "Followees",
+    "source_verifiedTRUE" = "Verified",
+    "trustworthySourcesNo trustworthy" = "Trustworthy Sources",
+    "word_count" = "Word count"
+  )) +
+  scale_color_manual(values = c("Helpfulness" = "seagreen", "Votecount" = "orange"))
+
 ```
-
 
 #Fig 6c
 ```{r}
@@ -294,8 +225,7 @@ ggplot(ccdf_data, aes(x = source_followers_count, y = percent, color = classific
 #Fig 6b
 ```{r}
 ccdf_data <- notes_ratings_source %>%
-    group_by(classification, source_friends_count)
-View(ccdf_data) %>%
+    group_by(classification, source_friends_count) %>%
     summarise(count = n()) %>%
     group_by(classification) %>%
     mutate(
