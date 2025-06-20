@@ -6,7 +6,7 @@ This study uses Birdwatch public data released by Twitter (now X) to explore how
 ## Replication
 1. Install tidyverse, knitr, stringr, broom and MASS libraries.
 2. Run the code from the finalReport.Rmd R Markdown file.
-3. Alternatively, you can [click this link](https://rawcdn.githack.com/msr-ds3/community-notes-2025-group-2/cc911265fa6cfb350b09bd37410ff85f0ad04611/final_report.html) to view the results of the replication without running the code. 
+3. Alternatively, you can [click this link](https://rawcdn.githack.com/msr-ds3/community-notes-2025-group-2/ca43da70fa92908b98622bddd4f7f8b9897cca2b/final_report.html) to view the results of the replication without running the code. 
  
 ## Data from the paper 
 
