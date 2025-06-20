@@ -462,6 +462,6 @@ ggplot(combined_coef, aes(x = term, y = estimate, color = Model)) +
 We find similar results to the original paper, although we did not account for text complexity and sentiment. There are some differences, notably in the the significance of follower count for total votes, word count of the note for rated helpfulness ratio, and whether the note marked the source tweet as misleading or not for the helpfulness ratio. 
 
 
-### Extension: RQ6
+## Extension: RQ6
 
 This paper focuses on how users interact with Birdwatch notes. It does not attempt to measure the impact of these notes on the overall Twitter community. What is the proportion of Birdwatch ratings for source tweets compared to retweets and replies? In further research, we would collect newer data, aim to replicate these plots, and research the interaction rate of the notes as compared to the tweets.
