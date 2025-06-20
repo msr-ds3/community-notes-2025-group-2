@@ -252,4 +252,3 @@ ggplot(unhelpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
         notHelpfulIrrelevantSources = ("Irrevalent sources")
     ))
 ```
-
