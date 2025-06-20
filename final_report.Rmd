@@ -1,5 +1,18 @@
+---
+title: "Replication of \"Community-Based Fact-Checking on Twitter’s Birdwatch Platform\""
+
+author: Sara Bleier, Srijana Shrestha
+date: "06/20/2025"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+    code_folding: hide
+---
 
 ```{r setup, include=FALSE}
+# load libraries needed for analysis and plotting
 library(scales)
 library(tidyverse)
 library(knitr)
@@ -7,16 +20,26 @@ library(ggplot2)
 library(stringr)
 library(broom)
 library(MASS)
+<<<<<<< HEAD
+=======
+
+# set plot theme
+theme_set(theme_bw())
+>>>>>>> cc911265fa6cfb350b09bd37410ff85f0ad04611
 ```
 
-```{r}
+> **Note:** Considering this paper was published in 2021, it seems there have been changes in the data. We have followed the same methodology and seen roughly similiar results to the original paper, albeit with some differences in quantity. 
+```{r Load in csv data, warning=FALSE, message=FALSE}
 notes <- read_tsv("filtered_data/filtered_notes.tsv")
 ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
 ```
 
-#Figure 2
-```{r}
-notes$trustworthySources <- factor(notes$trustworthySources, levels = c(0, 1), labels = c("Trustworthy sources", "No trustworthy"))
+## Figure 2 
+
+Replication: Number of users who responded "Yes" to the question "Did you link to sources you believe most people would consider trustworthy?"
+```{r Replicating Figure 2, warning = FALSE, message=FALSE}
+
+notes$trustworthySources <- factor(notes$trustworthySources, levels = c(0, 1), labels = c("Trustworthy sources", "No trustworthy sources"))
 
 ggplot(notes, aes(x = classification, fill = trustworthySources)) +
     geom_bar() +
@@ -27,8 +50,14 @@ ggplot(notes, aes(x = classification, fill = trustworthySources)) +
     coord_flip()
 ```
 
-#Figure 3
-```{r graph}
+### Figure 2 Report: 
+
+When replicating the figure, we get a higher count, considering the difference data, as noted previously 
+
+## Figure 3 
+
+Replication: Number of Birdwatch notes per checkbox answer option in response to the question “Why do you believe this tweet may be misleading?”
+```{r, Replicating Figure 3, warning = FALSE, message=FALSE}
 misleading_counts <- notes %>%
     summarise(
         misleadingOther = sum(misleadingOther),
@@ -56,8 +85,14 @@ ggplot(misleading_counts, aes(x = reorder(tag, count), y = count)) +
     ))
 ```
 
-#Figure 4.
-```{r graph}
+### Figure 3 Report:
+
+Again, considering differences in data, we found slightly different results, but the conclusions remain consistent.
+
+## Figure 4: 
+
+Number of Birdwatch notes per checkbox answer option in response to the question “Why do you believe this tweet is not misleading?”
+```{r Replicating Figure 4, warning = FALSE, message=FALSE}
 misleading_counts <- notes %>%
     summarise(
         notMisleadingPersonalOpinion = sum(notMisleadingPersonalOpinion),
@@ -82,8 +117,93 @@ ggplot(misleading_counts, aes(x = reorder(tag, count), y = count)) +
     ))
 ```
 
-#Figure 5c.
-```{r compute ccdf}
+### Figure 4 Report: 
+
+Again, considering differences in data, we found slightly higher results, but the conclusions remain consistent.
+
+## Figure 8:  
+
+Number of ratings per checkbox answer option in response to the prompt “What about this note was helpful to you?”
+```{r Replicating Figure 8, warning = FALSE, message=FALSE}
+
+helpful_ratings_counts <- ratings %>%
+    summarise(
+        helpfulInformative = sum(helpfulInformative),
+        helpfulClear = sum(helpfulClear),
+        helpfulGoodSources = sum(helpfulGoodSources),
+        helpfulEmpathetic = sum(helpfulEmpathetic),
+        helpfulUniqueContext = sum(helpfulUniqueContext),
+        helpfulAddressesClaim = sum(helpfulAddressesClaim),
+        helpfulImportantContext = sum(helpfulImportantContext),
+        helpfulOther = sum(helpfulOther)
+    ) %>%
+    pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
+    arrange(desc(count))
+
+ggplot(helpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
+    geom_bar(stat = "identity", fill = "navyblue") +
+    coord_flip() +
+    scale_x_discrete(labels = c(
+        "helpfulInformative" = "Informative",
+        "helpfulClear" = "Clear",
+        "helpfulGoodSources" = "Good sources",
+        "helpfulEmpathetic" = "Emphatetic",
+        "helpfulUniqueContext" = "Unique context",
+        "helpfulAddressesClaim" = "Addresses claim",
+        "helpfulImportantContext" = "Important context",
+        "helpfulOther" = "Other"
+    ))
+```
+
+### Figure 8 Report:
+
+We do find that less notes are rated informative in our data, as compared to the original paper
+
+## Figure 9: 
+
+Number of ratings per checkbox answer option in response to the question “Help us understand why this note was unhelpful.”
+```{r Replicating Figure 9, warning = FALSE, message=FALSE}
+unhelpful_ratings_counts <- ratings %>%
+    summarise(
+        notHelpfulSourcesMissingOrUnreliable = sum(notHelpfulSourcesMissingOrUnreliable),
+        notHelpfulOpinionSpeculationOrBias = sum(notHelpfulOpinionSpeculationOrBias),
+        notHelpfulMissingKeyPoints = sum(notHelpfulMissingKeyPoints),
+        notHelpfulArgumentativeOrBiased = sum(notHelpfulArgumentativeOrBiased),
+        notHelpfulIncorrect = sum(notHelpfulIncorrect),
+        notHelpfulOffTopic = sum(notHelpfulOffTopic),
+        notHelpfulHardToUnderstand = sum(notHelpfulHardToUnderstand),
+        notHelpfulSpamHarassmentOrAbuse = sum(notHelpfulSpamHarassmentOrAbuse),
+        notHelpfulOutdated = sum(notHelpfulOutdated),
+        notHelpfulIrrelevantSources = sum(notHelpfulIrrelevantSources)
+    ) %>%
+    pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
+    arrange(desc(count))
+
+ggplot(unhelpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
+    geom_bar(stat = "identity", fill = "dark red") +
+    coord_flip() +
+    scale_x_discrete(labels = c(
+        notHelpfulSourcesMissingOrUnreliable = ("Sources missing or unreliable"),
+        notHelpfulOpinionSpeculationOrBias = ("Opinion speculation or bias"),
+        notHelpfulMissingKeyPoints = ("Missing key points"),
+        notHelpfulArgumentativeOrBiased = ("Argumentative or inflammatory"),
+        notHelpfulIncorrect = ("Incorrect"),
+        notHelpfulOffTopic = ("Off topic"),
+        notHelpfulHardToUnderstand = ("Hard to understand"),
+        notHelpfulSpamHarassmentOrAbuse = ("Spam harassment or abuse"),
+        notHelpfulOutdated = ("Outdated"),
+        notHelpfulIrrelevantSources = ("Irrevalent sources")
+    ))
+```
+
+### Figure 9 Report:
+
+We found roughly similar results, with slight differences in quantity
+
+## Figure 5c: 
+
+CCDF for word count in text explanations of Birdwatch notes.
+```{r Replicating Figure 5c, warning = FALSE, message=FALSE}
 notes <- mutate(notes, word_count = str_count(summary, "\\w+"))
 
 notes <- arrange(notes, word_count)
@@ -114,9 +234,21 @@ ggplot(count_of_distinct, aes(x = word_count, y = percent, color = classificatio
     )
 ```
 
+### Figure 5c Report: 
 
+<<<<<<< HEAD
 #Figure 7a.
 ```{r compute ccdf}
+=======
+Besides the quantiative difference due to data difference, we also note that the not misleading notes actually overtake the misleading notes in word count briefly before being cut off, unlike in the paper
+
+
+## Figure 7a: 
+
+CCDF for helpfulness ratio 
+```{r Replicating Figure 7a, warning = FALSE, message=FALSE}
+
+>>>>>>> cc911265fa6cfb350b09bd37410ff85f0ad04611
 ratings <- group_by(ratings, noteId) |> mutate(votecount = n())
 
 notes$votecount <- ratings$votecount[match(notes$noteId, ratings$noteId)]
@@ -155,9 +287,21 @@ ggplot(helpful_ratio, aes(x = helpful_ratio, y = percent, color = classification
     )
 ```
 
+### Figure 7a Report:
 
+<<<<<<< HEAD
 #Figure 7b.
 ```{r compute ccdf}
+=======
+This is the first figure where we do see significance differences, as the notes rated not misleading are considered significantly less helpful then in the original paper
+
+## Figure 7b: 
+
+CCDF for total votes
+```{r Replicating Figure 7b, warning = FALSE, message=FALSE}
+
+
+>>>>>>> cc911265fa6cfb350b09bd37410ff85f0ad04611
 count_of_votes <- group_by(notes, classification, votecount) |>
     summarize(count = n()) |>
     group_by(classification) |>
@@ -184,76 +328,159 @@ ggplot(count_of_votes, aes(x = votecount, y = percent, color = classification)) 
     )
 ```
 
+### Figure 7b Report:
 
+We've found similiar results, but the highest vote count is only 123, as compared to ~150 in the original paper
+
+<<<<<<< HEAD
 #Figure 8.
+=======
 
-```{r}
-ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
+>>>>>>> cc911265fa6cfb350b09bd37410ff85f0ad04611
 
-helpful_ratings_counts <- ratings %>%
-    summarise(
-        helpfulInformative = sum(helpfulInformative),
-        helpfulClear = sum(helpfulClear),
-        helpfulGoodSources = sum(helpfulGoodSources),
-        helpfulEmpathetic = sum(helpfulEmpathetic),
-        helpfulUniqueContext = sum(helpfulUniqueContext),
-        helpfulAddressesClaim = sum(helpfulAddressesClaim),
-        helpfulImportantContext = sum(helpfulImportantContext),
-        helpfulOther = sum(helpfulOther)
-    ) %>%
-    pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
-    arrange(desc(count))
 
-ggplot(helpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
-    geom_bar(stat = "identity", fill = "navyblue") +
-    coord_flip() +
-    scale_x_discrete(labels = c(
-        "helpfulInformative" = "Informative",
-        "helpfulClear" = "Clear",
-        "helpfulGoodSources" = "Good sources",
-        "helpfulEmpathetic" = "Emphatetic",
-        "helpfulUniqueContext" = "Unique context",
-        "helpfulAddressesClaim" = "Addresses claim",
-        "helpfulImportantContext" = "Important context",
-        "helpfulOther" = "Other"
-    ))
+```{r Load source tweets data, warning=FALSE, message=FALSE}
+# donwloaded file in browser bc didn't work to curl here (downloaded as empty)
+load(file.path("C:/Users/ds3/Downloads/source_tweets.Rdata"), ournew_env <- new.env())
+source_tweets <- ournew_env[["."]]
 ```
 
-#Figure 9
-```{r}
-unhelpful_ratings_counts <- ratings %>%
-    summarise(
-        notHelpfulSourcesMissingOrUnreliable = sum(notHelpfulSourcesMissingOrUnreliable),
-        notHelpfulOpinionSpeculationOrBias = sum(notHelpfulOpinionSpeculationOrBias),
-        notHelpfulMissingKeyPoints = sum(notHelpfulMissingKeyPoints),
-        notHelpfulArgumentativeOrBiased = sum(notHelpfulArgumentativeOrBiased),
-        notHelpfulIncorrect = sum(notHelpfulIncorrect),
-        notHelpfulOffTopic = sum(notHelpfulOffTopic),
-        notHelpfulHardToUnderstand = sum(notHelpfulHardToUnderstand),
-        notHelpfulSpamHarassmentOrAbuse = sum(notHelpfulSpamHarassmentOrAbuse),
-        notHelpfulOutdated = sum(notHelpfulOutdated),
-        notHelpfulIrrelevantSources = sum(notHelpfulIrrelevantSources)
-    ) %>%
-    pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
-    arrange(desc(count))
+## Figure 10: 
 
-ggplot(unhelpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
-    geom_bar(stat = "identity", fill = "dark red") +
-    coord_flip() +
-    scale_x_discrete(labels = c(
-        notHelpfulSourcesMissingOrUnreliable = ("Sources missing or unreliable"),
-        notHelpfulOpinionSpeculationOrBias = ("Opinion speculation or bias"),
-        notHelpfulMissingKeyPoints = ("Missing key points"),
-        notHelpfulArgumentativeOrBiased = ("Argumentative or inflammatory"),
-        notHelpfulIncorrect = ("Incorrect"),
-        notHelpfulOffTopic = ("Off topic"),
-        notHelpfulHardToUnderstand = ("Hard to understand"),
-        notHelpfulSpamHarassmentOrAbuse = ("Spam harassment or abuse"),
-        notHelpfulOutdated = ("Outdated"),
-        notHelpfulIrrelevantSources = ("Irrevalent sources")
-    ))
+Regression results for helpfulness ratio and total votes as dependent variables (DV). Reported are standardized parameter estimates and 99 % confidence intervals.
+```{r r Replicating Figure 10, warning = FALSE, message=FALSE, fig.width=10, fig.height=6}
+#join data
+notes_with_ratings <- inner_join(notes, ratings, by = c("noteId", "votecount"))
+notes_ratings_source <- inner_join(notes_with_ratings, source_tweets, by = c("noteId", "tweetId"))
+
+#reformat helpful
+notes_ratings_source <- mutate(notes_ratings_source,
+  helpful = if_else(!is.na(helpfulnessLevel) &
+    helpfulnessLevel %in% c("HELPFUL", "SOMEWHAT_HELPFUL"), 1, helpful),
+  notHelpful = if_else(!is.na(helpfulnessLevel) & helpfulnessLevel == "NOT_HELPFUL", 1, notHelpful)
+)
+
+#add account age
+current_year <- as.numeric(format(Sys.Date(), "%Y"))
+notes_ratings_source <- notes_ratings_source |>
+  mutate(account_age = current_year - as.numeric(year(source_account_created_at)))
+
+#filter to remove NA
+notes_ratings_source <- notes_ratings_source %>%
+  filter(
+    !is.na(helpful),
+    !is.na(classification),
+    !is.na(trustworthySources),
+    !is.na(word_count),
+    !is.na(account_age),
+    !is.na(source_followers_count),
+    !is.na(source_friends_count),
+    !is.na(source_verified)
+  )
+
+#get predictors that need to be scaled and outcome
+predictors <- notes_ratings_source %>%
+  dplyr::select(word_count, account_age, source_followers_count, source_friends_count)
+vote_predictors <- predictors
+
+helpful_outcome <- notes_ratings_source$helpful
+votecount_outcome <- notes_ratings_source$votecount
+
+# get z-scores for predictors (standardize)
+predictors_scaled <- as_tibble(scale(predictors))
+vote_predictors_scaled <- as_tibble(scale(vote_predictors))
+
+# combined the scaled predictors with the already categorical predictors
+helpful_scaled <- bind_cols(
+  predictors_scaled,
+  classification = notes_ratings_source$classification,
+  trustworthySources = notes_ratings_source$trustworthySources,
+  source_verified = notes_ratings_source$source_verified,
+  helpful = helpful_outcome
+)
+
+votes_scaled <- bind_cols(
+  vote_predictors_scaled,
+  classification = notes_ratings_source$classification,
+  trustworthySources = notes_ratings_source$trustworthySources,
+  source_verified = notes_ratings_source$source_verified,
+  votecount = votecount_outcome
+)
+
+# set reference levels for categorical predictors
+helpful_scaled$classification <- relevel(factor(helpful_scaled$classification), ref = "NOT_MISLEADING")
+helpful_scaled$trustworthySources <- as.factor(helpful_scaled$trustworthySources)
+
+votes_scaled$classification <- relevel(factor(votes_scaled$classification), ref = "NOT_MISLEADING")
+votes_scaled$trustworthySources <- as.factor(votes_scaled$trustworthySources)
+
+# fit models on standardized 
+helpful_model <- glm(
+  helpful ~ classification + trustworthySources + word_count + account_age +
+    source_followers_count + source_friends_count + source_verified,
+  data = helpful_scaled, family = "binomial"
+)
+
+votes_model <- glm.nb(
+  votecount ~ classification + trustworthySources + word_count + account_age +
+    source_followers_count + source_friends_count + source_verified,
+  data = votes_scaled
+)
+
+# get model coefficients
+votes_coef <- tidy(votes_model) |> filter(term != "(Intercept)")
+coef <- tidy(helpful_model) %>% filter(term != "(Intercept)")
+
+# set order to match figure
+term_levels <- c(
+  "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING",
+  "trustworthySourcesNo trustworthy",
+  "word_count",
+  "account_age",
+  "source_followers_count",
+  "source_friends_count",
+  "source_verifiedTRUE"
+)
+votes_coef$term <- factor(votes_coef$term, levels = term_levels)
+coef$term <- factor(coef$term, levels = term_levels)
+
+# label models to differentiate
+coef$Model <- "Helpfulness"
+votes_coef$Model <- "Votecount"
+
+# combine models and plot
+combined_coef <- bind_rows(coef, votes_coef)
+combined_coef <- combined_coef %>% filter(!is.na(term))
+
+ggplot(combined_coef, aes(x = term, y = estimate, color = Model)) +
+  geom_point(size = 4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(
+    aes(ymin = estimate - std.error * 2.56, ymax = estimate + std.error * 2.56),
+    width = 0.2, size = 1.2, position = position_dodge(width = 0.5)
+  ) +
+  theme(
+  axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+  plot.margin = margin(t = 10, r = 10, b = 40, l = 10)
+) +
+  labs(x = NULL, y = NULL, color = "Model") +
+  geom_vline(xintercept = c(2.5, 3.5), linetype = "dashed", color = "black") +
+  annotate("text", x = 1, y = max(combined_coef$estimate, na.rm = TRUE), label = "User categorization", size = 4, fontface = "bold") +
+  annotate("text", x = 3, y = max(combined_coef$estimate, na.rm = TRUE), label = "Text explanation", size = 4, fontface = "bold") +
+  annotate("text", x = 4, y = max(combined_coef$estimate, na.rm = TRUE), label = "Source tweet", size = 4, fontface = "bold") +
+  scale_x_discrete(labels = c(
+    "account_age" = "Account age",
+    "classificationMISINFORMED_OR_POTENTIALLY_MISLEADING" = "Misleading",
+    "source_followers_count" = "Followers",
+    "source_friends_count" = "Followees",
+    "source_verifiedTRUE" = "Verified",
+    "trustworthySourcesNo trustworthy" = "Trustworthy Sources",
+    "word_count" = "Word count"
+  )) +
+  scale_color_manual(values = c("Helpfulness" = "seagreen", "Votecount" = "orange"))
+
 ```
 
+<<<<<<< HEAD
 #Fig 6a
 ```{r}
 notes_with_ratings <- inner_join(notes, ratings, by = "noteId")
@@ -502,3 +729,8 @@ ggplot(combined_coef, aes(x = term, y = estimate, color = Model)) +
     )) +
     scale_color_manual(values = c("Helpfulness" = "seagreen", "Votecount" = "orange"))
 ```
+=======
+### Figure 10 Report:
+
+We find similar results to the original paper, although we did not account for text complexity and sentiment. There are some differences, notably in the the significance of follower count for total votes, word count of the note for rated helpfulness ratio, and whether the note marked the source tweet as misleading or not for the helpfulness ratio. 
+>>>>>>> cc911265fa6cfb350b09bd37410ff85f0ad04611
