@@ -1,3 +1,4 @@
+
 ```{r setup, include=FALSE}
 library(scales)
 library(tidyverse)
@@ -9,8 +10,6 @@ library(stringr)
 ```{r}
 notes <- read_tsv("filtered_data/filtered_notes.tsv")
 ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
-View(head(notes, 200))
-View(head(ratings, 200))
 ```
 
 #Figure 2
@@ -116,6 +115,7 @@ ggplot(count_of_distinct, aes(x = word_count, y = percent, color = classificatio
 
 #Figure 7a.
 ```{r compute ccdf}
+
 ratings <- group_by(ratings, noteId) |> mutate(votecount = n())
 
 notes$votecount <- ratings$votecount[match(notes$noteId, ratings$noteId)]
@@ -154,8 +154,11 @@ ggplot(helpful_ratio, aes(x = helpful_ratio, y = percent, color = classification
     )
 ```
 
+
 #Figure 7b.
 ```{r compute ccdf}
+
+
 count_of_votes <- group_by(notes, classification, votecount) |>
     summarize(count = n()) |>
     group_by(classification) |>
@@ -180,11 +183,16 @@ ggplot(count_of_votes, aes(x = votecount, y = percent, color = classification)) 
         title = "Total Votes",
         color = "Classification"
     )
+
 ```
 
+
+
 #Figure 8.
+
 ```{r}
 ratings <- read_tsv("filtered_data/complete_filtered_ratings.tsv")
+
 helpful_ratings_counts <- ratings %>%
     summarise(
         helpfulInformative = sum(helpfulInformative),
@@ -198,8 +206,6 @@ helpful_ratings_counts <- ratings %>%
     ) %>%
     pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
     arrange(desc(count))
-
-View(helpful_ratings_counts)
 
 ggplot(helpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
     geom_bar(stat = "identity", fill = "navyblue") +
@@ -215,7 +221,6 @@ ggplot(helpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
         "helpfulOther" = "Other"
     ))
 ```
-
 
 #Figure 9
 ```{r}
@@ -234,7 +239,6 @@ unhelpful_ratings_counts <- ratings %>%
     ) %>%
     pivot_longer(everything(), names_to = "tag", values_to = "count") %>%
     arrange(desc(count))
-unhelpful_ratings_counts
 
 ggplot(unhelpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
     geom_bar(stat = "identity", fill = "dark red") +
@@ -252,3 +256,4 @@ ggplot(unhelpful_ratings_counts, aes(x = reorder(tag, count), y = count)) +
         notHelpfulIrrelevantSources = ("Irrevalent sources")
     ))
 ```
+
